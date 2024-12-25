@@ -19,7 +19,7 @@ bot = commands.Bot(intents=intents)
 async def on_ready():
     print(f"Bot is online! Logged in as {bot.user}")
 
-# Example commands
+# Test command
 @bot.slash_command(description="Say hello to the bot")
 async def hello(ctx):
     await ctx.respond("Bot is working as intended.")
