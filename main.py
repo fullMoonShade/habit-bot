@@ -24,6 +24,12 @@ async def on_ready():
 async def hello(ctx):
     await ctx.respond("Bot is working as intended.")
 
+try:
+    bot.load_extension("moderation")
+    print("Moderation Cog loaded successfully.")
+except Exception as e:
+    print(f"Failed to load Moderation Cog: {e}")
+  
 # Run
 if __name__ == "__main__":
     if API_KEY:
