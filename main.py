@@ -29,6 +29,12 @@ try:
     print("Moderation Cog loaded successfully.")
 except Exception as e:
     print(f"Failed to load Moderation Cog: {e}")
+
+try:
+    bot.load_extension("habit")
+    print("Habit Cog loaded successfully.")
+except Exception as e:
+    print(f"Failed to load Habit Cog: {e}")
   
 # Run
 if __name__ == "__main__":
