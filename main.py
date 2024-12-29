@@ -20,21 +20,27 @@ async def on_ready():
     print(f"Bot is online! Logged in as {bot.user}")
 
 # Test command
-@bot.slash_command(description="Say hello to the bot")
-async def hello(ctx):
+@bot.slash_command(description="Test command")
+async def test(ctx):
     await ctx.respond("Bot is working as intended.")
 
+"""
+Loading all cogs
+"""
+
+# Moderation cog
 try:
     bot.load_extension("moderation")
     print("Moderation Cog loaded successfully.")
 except Exception as e:
     print(f"Failed to load Moderation Cog: {e}")
 
+# Habit cog
 try:
     bot.load_extension("habit")
-    print("Habit Cog loaded successfully.")
+    print("To-do Cog loaded successfully.")
 except Exception as e:
-    print(f"Failed to load Habit Cog: {e}")
+    print(f"Failed to load To-do Cog: {e}")
   
 # Run
 if __name__ == "__main__":

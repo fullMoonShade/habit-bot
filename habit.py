@@ -1,104 +1,102 @@
-# AI generated abstraction of habit tracking functionality  
-
 import discord
 from discord.ext import commands, tasks
 
-class HabitTracker(commands.Cog):
+class ToDoList(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.habit_message = None  # Store the stickied message
-        self.channel_id = None  # Channel where the habit tracker is posted
-        self.habits = []  # List of habits to track
-        self.update_habits.start()  # Start the update task
+        self.todo_message = None  # Store the stickied message
+        self.channel_id = None  # Channel where the to-do list is posted
+        self.todos = []  # List storing the to-do items
+        self.reset_tasks.start()  # Start the reset task
 
-    @commands.slash_command(description="Setup a habit tracker in the current channel.")
-    async def setup_habit_tracker(self, ctx):
+    @commands.slash_command(description="Set up a to-do list in this channel.")
+    async def setup_todo_list(self, ctx):
         """
-        Sets up a habit tracker by creating a stickied message in the channel.
+        Sets up a to-do list by creating a stickied message in the current channel.
         """
         # Save the channel ID for updates
         self.channel_id = ctx.channel.id
 
         # Create the initial stickied message
         embed = discord.Embed(
-            title="Habit Tracker",
-            description="Track your habits here!\n\nAdd habits using `/add_habit`.\nMark them complete using `/complete_habit`.",
-            color=discord.Color.blue()
+            title="To-Do List",
+            description="Track your tasks here!\n\nAdd tasks using `/add_task`.\nMark them complete using `/complete_task`.",
+            color=discord.Color.green()
         )
-        embed.add_field(name="Current Habits", value="No habits added yet.", inline=False)
+        embed.add_field(name="Current Tasks", value="No tasks added yet.", inline=False)
 
-        self.habit_message = await ctx.channel.send(embed=embed)
-        await ctx.respond("Habit tracker set up successfully!", ephemeral=True)
+        self.todo_message = await ctx.channel.send(embed=embed)
+        await ctx.respond("To-do list set up successfully!", ephemeral=True)
 
-    @commands.slash_command(description="Add a habit to the tracker.")
-    async def add_habit(self, ctx, habit: str):
+    @commands.slash_command(description="Add a task to the to-do list.")
+    async def add_task(self, ctx, task: str):
         """
-        Adds a habit to the tracker.
+        Adds a task to the to-do list.
         """
-        if not self.habit_message:
-            await ctx.respond("No habit tracker is set up yet. Use `/setup_habit_tracker` first.", ephemeral=True)
+        if not self.todo_message:
+            await ctx.respond("No to-do list is set up yet. Use `/setup_todo_list` first.", ephemeral=True)
             return
 
-        # Add the habit and update the message
-        self.habits.append({"habit": habit, "completed": False})
-        await self.update_habit_message()
-        await ctx.respond(f"Added habit: **{habit}**", ephemeral=True)
+        # Add the task and update the message
+        self.todos.append({"task": task, "completed": False})
+        await self.update_todo_message()
+        await ctx.respond(f"Added task: **{task}**", ephemeral=True)
 
-    @commands.slash_command(description="Mark a habit as completed.")
-    async def complete_habit(self, ctx, habit: str):
+    @commands.slash_command(description="Mark a task as completed.")
+    async def complete_task(self, ctx, task: str):
         """
-        Marks a habit as completed.
+        Marks a task as completed on the to-do list.
         """
-        if not self.habit_message:
-            await ctx.respond("No habit tracker is set up yet. Use `/setup_habit_tracker` first.", ephemeral=True)
+        if not self.todo_message:
+            await ctx.respond("No to-do list is set up yet. Use `/setup_todo_list` first.", ephemeral=True)
             return
 
-        # Mark the habit as completed
-        for h in self.habits:
-            if h["habit"].lower() == habit.lower():
-                h["completed"] = True
-                await self.update_habit_message()
-                await ctx.respond(f"Marked habit **{habit}** as completed!", ephemeral=True)
+        # Mark the task as completed
+        for t in self.todos:
+            if t["task"].lower() == task.lower():
+                t["completed"] = True
+                await self.update_todo_message()
+                await ctx.respond(f"Marked task **{task}** as completed!", ephemeral=True)
                 return
 
-        await ctx.respond(f"Habit **{habit}** not found.", ephemeral=True)
+        await ctx.respond(f"Task **{task}** not found.", ephemeral=True)
 
-    async def update_habit_message(self):
+    async def update_todo_message(self):
         """
-        Updates the stickied message with the latest habits and statuses.
+        Updates the stickied message with the latest tasks and statuses.
         """
-        if not self.habit_message:
+        if not self.todo_message:
             return
 
         # Prepare the updated embed
         embed = discord.Embed(
-            title="Habit Tracker",
-            description="Track your habits here!",
-            color=discord.Color.blue()
+            title="To-Do List",
+            description="Track your tasks here!",
+            color=discord.Color.green()
         )
-        if self.habits:
-            habit_list = "\n".join(
-                f"- {'~~' if h['completed'] else ''}{h['habit']}{'~~' if h['completed'] else ''}"
-                for h in self.habits
+        if self.todos:
+            task_list = "\n".join(
+                f"- {'~~' if t['completed'] else ''}{t['task']}{'~~' if t['completed'] else ''}"
+                for t in self.todos
             )
         else:
-            habit_list = "No habits added yet."
+            task_list = "No tasks added yet."
 
-        embed.add_field(name="Current Habits", value=habit_list, inline=False)
-        await self.habit_message.edit(embed=embed)
+        embed.add_field(name="Current Tasks", value=task_list, inline=False)
+        await self.todo_message.edit(embed=embed)
 
     @tasks.loop(hours=24)
-    async def update_habits(self):
+    async def reset_tasks(self):
         """
-        Resets the completion status of all habits daily.
+        Resets the completion status of all tasks daily.
         """
-        for habit in self.habits:
-            habit["completed"] = False
-        if self.habit_message:
-            await self.update_habit_message()
+        for task in self.todos:
+            task["completed"] = False
+        if self.todo_message:
+            await self.update_todo_message()
 
-    @update_habits.before_loop
-    async def before_update_habits(self):
+    @reset_tasks.before_loop
+    async def before_reset_tasks(self):
         """
         Wait until the bot is ready before starting the task.
         """
@@ -107,4 +105,4 @@ class HabitTracker(commands.Cog):
 
 # Setup function to register the Cog
 def setup(bot):
-    bot.add_cog(HabitTracker(bot))
+    bot.add_cog(ToDoList(bot))
