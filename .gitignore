@@ -60,3 +60,6 @@ config/*.local
 # Git specific
 .git/
 *.lock
+
+# Database 
+.db/
