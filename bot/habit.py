@@ -7,8 +7,7 @@ class ToDoList(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.db_path = self._setup_database()  # Set up the database
-        self.todo_message = None  # Store the stickied message
-        self.channel_id = None  # Channel where the to-do list is posted
+        self.todo_messages = {}  # Store stickied messages per user
         self.reset_tasks.start()  # Start the reset task
 
     def _setup_database(self):
@@ -51,9 +50,6 @@ class ToDoList(commands.Cog):
         """
         Sets up a to-do list by creating a stickied message in the current channel.
         """
-        self.channel_id = ctx.channel.id  # Save the channel ID
-
-        # Create the initial stickied message
         embed = discord.Embed(
             title="To-Do List",
             description="Track your tasks here!\n\nAdd tasks using `/add_task`.\nMark them complete using `/complete_task`.",
@@ -61,7 +57,8 @@ class ToDoList(commands.Cog):
         )
         embed.add_field(name="Current Tasks", value="No tasks added yet.", inline=False)
 
-        self.todo_message = await ctx.channel.send(embed=embed)
+        message = await ctx.channel.send(embed=embed)
+        self.todo_messages[ctx.author.id] = message
         await ctx.respond("To-do list set up successfully!", ephemeral=True)
 
     @commands.slash_command(description="Add a task to the to-do list.")
@@ -71,7 +68,7 @@ class ToDoList(commands.Cog):
         """
         user_id = ctx.author.id
         self._db_execute("INSERT INTO tasks (user_id, task) VALUES (?, ?)", (user_id, task))
-        await self.update_todo_message(ctx.author.id)
+        await self.update_todo_message(user_id)
         await ctx.respond(f"Added task: **{task}**", ephemeral=True)
 
     @commands.slash_command(description="Mark a task as completed by ID.")
@@ -81,28 +78,30 @@ class ToDoList(commands.Cog):
         """
         user_id = ctx.author.id
 
+        # Check if the task exists
+        task = self._db_execute(
+            "SELECT id FROM tasks WHERE id = ? AND user_id = ?",
+            (task_id, user_id),
+            fetch=True
+        )
+        if not task:
+            await ctx.respond(f"No task found with ID **{task_id}** for your user.", ephemeral=True)
+            return
+
         # Update the task's completion status
         self._db_execute(
             "UPDATE tasks SET completed = TRUE WHERE id = ? AND user_id = ?",
             (task_id, user_id)
         )
-
-        # Check if any rows were updated
-        updated_rows = self._db_execute(
-            "SELECT changes()",
-            fetch=True
-        )
-        if updated_rows[0][0] == 0:
-            await ctx.respond(f"No task found with ID **{task_id}** for your user.", ephemeral=True)
-        else:
-            await self.update_todo_message(ctx.author.id)
-            await ctx.respond(f"Marked task ID **{task_id}** as completed!", ephemeral=True)
+        await self.update_todo_message(user_id)
+        await ctx.respond(f"Marked task ID **{task_id}** as completed!", ephemeral=True)
 
     async def update_todo_message(self, user_id: int):
         """
         Updates the stickied message with the latest tasks and statuses for the user.
         """
-        if not self.todo_message:
+        message = self.todo_messages.get(user_id)
+        if not message:
             return
 
         # Retrieve tasks for the user
@@ -127,7 +126,7 @@ class ToDoList(commands.Cog):
             task_list = "No tasks added yet."
 
         embed.add_field(name="Current Tasks", value=task_list, inline=False)
-        await self.todo_message.edit(embed=embed)
+        await message.edit(embed=embed)
 
     @tasks.loop(hours=24)
     async def reset_tasks(self):
@@ -143,11 +142,6 @@ class ToDoList(commands.Cog):
         """
         await self.bot.wait_until_ready()
 
-
 # Setup function to register the Cog
 def setup(bot):
     bot.add_cog(ToDoList(bot))
-
-
-
-# gpt-4 generated abstraction of using sqlite3 to store user data
