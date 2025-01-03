@@ -96,6 +96,16 @@ class ToDoList(commands.Cog):
         await self.update_todo_message(user_id)
         await ctx.respond(f"Marked task ID **{task_id}** as completed!", ephemeral=True)
 
+    @commands.slash_command(description="Clear all your tasks.")
+    async def clear_tasks(self, ctx):
+        """
+        Clears all tasks for the user.
+        """
+        user_id = ctx.author.id
+        self._db_execute("DELETE FROM tasks WHERE user_id = ?", (user_id,))
+        await self.update_todo_message(user_id)
+        await ctx.respond("All your tasks have been cleared.", ephemeral=True)
+
     async def update_todo_message(self, user_id: int):
         """
         Updates the stickied message with the latest tasks and statuses for the user.
