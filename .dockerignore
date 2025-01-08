@@ -1,0 +1,35 @@
+# Ignore the database folder
+.db/
+
+# Ignore environment files with sensitive data
+.env
+
+# Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+
+# Logs and debug files
+*.log
+*.out
+*.err
+
+# IDE and editor-specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Git files
+.git/
+.gitignore
