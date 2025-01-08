@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
+if not TOKEN:
+    logger.error("No Discord token found in environment variables!")
+    raise ValueError("DISCORD_TOKEN environment variable is required")
 
 def create_bot():
     """Creates and configures the bot instance"""
@@ -57,8 +60,20 @@ def create_bot():
         
         await ctx.respond(embed=embed)
 
+    # Load extensions
+    try:
+        bot.load_extension('moderation')
+        logger.info("Successfully loaded moderation extension")
+    except Exception as e:
+        logger.error(f"Failed to load moderation extension: {e}") 
+
     return bot
 
 if __name__ == "__main__":
     bot = create_bot()
-    bot.run(TOKEN)
+    try:
+        bot.run(TOKEN)
+    except discord.errors.LoginFailure:
+        logger.error("Failed to login to Discord. Please check your token.")
+    except Exception as e:
+        logger.error(f"An error occurred while running the bot: {e}")
