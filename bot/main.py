@@ -67,6 +67,12 @@ def create_bot():
     except Exception as e:
         logger.error(f"Failed to load moderation extension: {e}") 
 
+    try:
+        bot.load_extension('productivity')
+        logger.info("Successfully loaded productivity extension")
+    except Exception as e:
+        logger.error(f"Failed to load productivity extension: {e}") 
+
     return bot
 
 if __name__ == "__main__":
