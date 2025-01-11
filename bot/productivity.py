@@ -32,7 +32,6 @@ class HabitsCog(commands.Cog):
             description,
             reminder_time
         )
-        
         if success:
             embed = discord.Embed(
                 title="Habit Added",
@@ -45,7 +44,6 @@ class HabitsCog(commands.Cog):
                 description="You already have a habit with this name",
                 color=discord.Color.red()
             )
-            
         await ctx.respond(embed=embed, ephemeral=True)
 
     @habits.command(name="complete")
@@ -56,7 +54,6 @@ class HabitsCog(commands.Cog):
     ):
         """Mark a habit as completed for today"""
         success = self.db.complete_habit(habit_id)
-        
         if success:
             streak = self.db.get_habit_streak(habit_id)
             embed = discord.Embed(
@@ -70,14 +67,12 @@ class HabitsCog(commands.Cog):
                 description="Habit already completed for today or habit not found",
                 color=discord.Color.red()
             )
-            
         await ctx.respond(embed=embed, ephemeral=True)
 
     @habits.command(name="list")
     async def list_habits(self, ctx: discord.ApplicationContext):
         """List all your habits"""
         habits = self.db.get_user_habits(str(ctx.author.id))
-        
         if not habits:
             embed = discord.Embed(
                 title="No Habits",
@@ -89,7 +84,6 @@ class HabitsCog(commands.Cog):
                 title="Your Habits",
                 color=discord.Color.blue()
             )
-            
             for habit in habits:
                 streak = self.db.get_habit_streak(habit['habit_id'])
                 description = habit['description'] or 'No description'
@@ -98,7 +92,6 @@ class HabitsCog(commands.Cog):
                     value=f"Description: {description}\nFrequency: {habit['frequency']}\nCurrent streak: {streak} days",
                     inline=False
                 )
-                
         await ctx.respond(embed=embed, ephemeral=True)
 
     @todos.command(name="add")
@@ -118,7 +111,6 @@ class HabitsCog(commands.Cog):
             due_date,
             priority
         )
-        
         embed = discord.Embed(
             title="Todo Added",
             description=f"Successfully added todo #{todo_id}: {title}",
@@ -134,7 +126,6 @@ class HabitsCog(commands.Cog):
     ):
         """Mark a todo as completed"""
         success = self.db.complete_todo(todo_id)
-        
         if success:
             embed = discord.Embed(
                 title="Todo Completed",
@@ -147,7 +138,6 @@ class HabitsCog(commands.Cog):
                 description="Todo not found or already completed",
                 color=discord.Color.red()
             )
-            
         await ctx.respond(embed=embed, ephemeral=True)
 
     @todos.command(name="list")
@@ -158,7 +148,6 @@ class HabitsCog(commands.Cog):
     ):
         """List all your todos"""
         todos = self.db.get_user_todos(str(ctx.author.id), include_completed)
-        
         if not todos:
             embed = discord.Embed(
                 title="No Todos",
@@ -170,20 +159,38 @@ class HabitsCog(commands.Cog):
                 title="Your Todos",
                 color=discord.Color.blue()
             )
-            
             for todo in todos:
                 status = "✅ Completed" if todo['completed'] else "⏳ Pending"
                 due_date = f"Due: {todo['due_date']}" if todo['due_date'] else "No due date"
                 description = todo['description'] or 'No description'
-                
                 embed.add_field(
                     name=f"#{todo['todo_id']} - {todo['title']} (Priority: {todo['priority']})",
                     value=f"Status: {status}\n{due_date}\nDescription: {description}",
                     inline=False
                 )
-                
         await ctx.respond(embed=embed, ephemeral=True)
 
+    @habits.command(name="clear")
+    async def clear_habits(self, ctx: discord.ApplicationContext):
+        """Clear all your habits"""
+        deleted_count = self.db.clear_habits(str(ctx.author.id))
+        embed = discord.Embed(
+            title="Habits Cleared",
+            description=f"Deleted {deleted_count} habits.",
+            color=discord.Color.orange()
+        )
+        await ctx.respond(embed=embed, ephemeral=True)
+
+    @todos.command(name="clear")
+    async def clear_todos(self, ctx: discord.ApplicationContext):
+        """Clear all your todos"""
+        deleted_count = self.db.clear_todos(str(ctx.author.id))
+        embed = discord.Embed(
+            title="Todos Cleared",
+            description=f"Deleted {deleted_count} todos.",
+            color=discord.Color.orange()
+        )
+        await ctx.respond(embed=embed, ephemeral=True)
 
 class HabitsDatabase:
     def __init__(self):
@@ -392,7 +399,46 @@ class HabitsDatabase:
                 'completed': row[5]
             })
         return todos
-    
+
+    def clear_habits(self, user_id: str) -> int:
+        """
+        Clear all habits for a user
+        Returns the number of habits deleted
+        """
+        # First delete all habit completions for the user's habits
+        self.cursor.execute('''
+            DELETE FROM habit_completions 
+            WHERE habit_id IN (
+                SELECT habit_id 
+                FROM habits 
+                WHERE user_id = ?
+            )
+        ''', (user_id,))
+        
+        # Then delete the habits themselves
+        self.cursor.execute('''
+            DELETE FROM habits 
+            WHERE user_id = ?
+        ''', (user_id,))
+        
+        deleted_count = self.cursor.rowcount
+        self.conn.commit()
+        return deleted_count
+
+    def clear_todos(self, user_id: str) -> int:
+        """
+        Clear all todos for a user
+        Returns the number of todos deleted
+        """
+        self.cursor.execute('''
+            DELETE FROM todos 
+            WHERE user_id = ?
+        ''', (user_id,))
+        
+        deleted_count = self.cursor.rowcount
+        self.conn.commit()
+        return deleted_count
+
     def __del__(self):
         """Close database connection when object is destroyed"""
         self.conn.close()
