@@ -21,7 +21,7 @@ if not TOKEN:
 def create_bot():
     """Creates and configures the bot instance"""
     intents = discord.Intents.all()
-    bot = discord.Bot(intents=intents)
+    bot = commands.Bot(command_prefix='/', intents=intents)
     
     @bot.event
     async def on_ready():
@@ -49,7 +49,9 @@ def create_bot():
             color=discord.Color.blue()
         )
         
-        embed.add_field(name="Server Owner", value=server.owner, inline=True)
+        # In py-cord, we need to handle potential None values for the owner
+        owner = server.owner if server.owner else "Unknown"
+        embed.add_field(name="Server Owner", value=owner, inline=True)
         embed.add_field(name="Member Count", value=server.member_count, inline=True)
         embed.add_field(name="Channel Count", value=len(server.channels), inline=True)
         embed.add_field(name="Role Count", value=len(server.roles), inline=True)
@@ -65,21 +67,21 @@ def create_bot():
         bot.load_extension('moderation')
         logger.info("Successfully loaded moderation extension")
     except Exception as e:
-        logger.error(f"Failed to load moderation extension: {e}") 
+        logger.error(f"Failed to load moderation extension: {e}")
 
     try:
-        bot.load_extension('productivity')
-        logger.info("Successfully loaded productivity extension")
+        bot.load_extension('habits_cog')
+        logger.info("Successfully loaded habits extension")
     except Exception as e:
-        logger.error(f"Failed to load productivity extension: {e}") 
-
+        logger.error(f"Failed to load habits extension: {e}")
+    
     return bot
 
 if __name__ == "__main__":
     bot = create_bot()
     try:
         bot.run(TOKEN)
-    except discord.errors.LoginFailure:
+    except discord.LoginFailure:
         logger.error("Failed to login to Discord. Please check your token.")
     except Exception as e:
         logger.error(f"An error occurred while running the bot: {e}")
