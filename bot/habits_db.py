@@ -222,9 +222,9 @@ class HabitsDatabase:
 
     def clear_habits(self, user_id: str) -> int:
         """
-        Clear all habits for a user
-        Returns the number of habits deleted
+        Clear all habits for a user and reset habit_id sequence
         """
+        deleted_count = 0
         # First delete all habit completions for the user's habits
         self.cursor.execute('''
             DELETE FROM habit_completions 
@@ -236,28 +236,30 @@ class HabitsDatabase:
         ''', (user_id,))
         
         # Then delete the habits themselves
-        self.cursor.execute('''
+        deleted_count = self.cursor.execute('''
             DELETE FROM habits 
             WHERE user_id = ?
-        ''', (user_id,))
-        
-        deleted_count = self.cursor.rowcount
+        ''', (user_id,)).rowcount
+
+        # Reset the sqlite_sequence table
+        if deleted_count > 0:
+            self.cursor.execute("UPDATE sqlite_sequence SET seq = 0 WHERE name = 'habits'")
         self.conn.commit()
         return deleted_count
 
     def clear_todos(self, user_id: str) -> int:
-        """
-        Clear all todos for a user
-        Returns the number of todos deleted
-        """
-        self.cursor.execute('''
-            DELETE FROM todos 
-            WHERE user_id = ?
-        ''', (user_id,))
-        
-        deleted_count = self.cursor.rowcount
-        self.conn.commit()
-        return deleted_count
+      """
+        Clear all todos for a user and reset todo_id sequence using sqlite_sequence table
+      """
+      deleted_count = self.cursor.execute('''
+          DELETE FROM todos 
+          WHERE user_id = ?
+        ''', (user_id,)).rowcount
+
+      if deleted_count > 0:
+        self.cursor.execute("UPDATE sqlite_sequence SET seq = 0 WHERE name = 'todos'")
+      self.conn.commit()
+      return deleted_count
 
 
     def __del__(self):
